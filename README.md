@@ -39,7 +39,7 @@ flowchart LR
 ## 🛠️ Tech Stack
 
 - **Language:** Python 3.10+
-- **Computer Vision:** OpenCV, NumPy
+- **Computer Vision:** NumPy (2D Euclidean landmark geometry & classification)
 - **Interface / Dashboard:** [Streamlit](https://streamlit.io/)
 - **Version Control:** Git & GitHub
 
@@ -70,6 +70,19 @@ streamlit run app.py
 ```
 
 Open `http://localhost:8501` to view the gesture controller dashboard.
+
+---
+
+## 🧪 Testing
+
+```bash
+pip install -r requirements.txt
+pytest
+```
+
+The test suite covers gesture classification for all five postures, landmark input validation,
+distance math, and the action dispatcher (slide navigation, volume, media toggle, mute, cooldown,
+and history cap).
 
 ---
 

@@ -1,4 +1,5 @@
 streamlit>=1.39.0
-opencv-python-headless>=4.10.0.84
 numpy>=1.26.0
-pillow>=10.0.0
+
+# Development / testing
+pytest>=8.0.0
