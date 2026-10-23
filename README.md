@@ -3,7 +3,7 @@
 Media and pointer control without touching anything. A camera frame is reduced to
 21 hand landmarks, classified into five postures, and routed to real controls:
 playback, volume, mute, track selection and an on-screen pointer. Inference runs
-inside the tab — no upload, no account, no backend.
+inside the tab, with no upload, no account and no backend.
 
 **[Open `index.html`](index.html)** or run the local server below.
 
@@ -14,7 +14,7 @@ inside the tab — no upload, no account, no backend.
 | Gesture | Control | Behaviour |
 | --- | --- | --- |
 | 🖐️ Open palm | Pointer | Continuous; the palm centre steers a pointer across the pad. |
-| 🤏 Pinch | Volume | Continuous; thumb–index gap maps to 0–100%, normalised by palm width. |
+| 🤏 Pinch | Volume | Continuous; thumb to index gap maps to 0 to 100%, normalised by palm width. |
 | ✌️ Peace | Play / pause | Discrete; toggles the audio engine and logs the state. |
 | 👍 Thumbs up | Next track | Discrete; advances through the playlist. |
 | ✊ Closed fist | Mute / unmute | Discrete; toggles audio and clears mute on the next volume change. |
@@ -24,7 +24,7 @@ controller stays usable without a camera.
 
 ### What is actually being controlled
 
-The media engine is a small Web Audio pad — three oscillators through a
+The media engine is a small Web Audio pad: three oscillators through a
 low-pass filter with a slow cutoff LFO, one voice set per track. Volume and mute
 change a real gain stage, play/pause gates it, next track swaps the chord, and
 the waveform is drawn from an `AnalyserNode`, so what you see is the signal that
@@ -78,7 +78,7 @@ modules stay as the documented reference and are what the test suite exercises.
 
 ## Run it
 
-### Static (recommended — full camera access)
+### Static (recommended, full camera access)
 
 ```bash
 python -m http.server 8000
@@ -87,7 +87,7 @@ python -m http.server 8000
 
 Camera access requires a secure context: `localhost` or HTTPS. Opening
 `index.html` directly from disk (`file://`) will not expose a camera in most
-browsers — the app detects that and switches to the simulator.
+browsers. The app detects that and switches to the simulator.
 
 ### Streamlit host
 
@@ -99,7 +99,7 @@ streamlit run app.py
 ```
 
 The Streamlit entry inlines the same app into a component iframe. If your browser
-blocks camera permission inside an embedded frame, open the static version above —
+blocks camera permission inside an embedded frame, open the static version above,
 the app says so and keeps the simulator available.
 
 ### Deploy
@@ -134,6 +134,6 @@ volume bounds, media toggle, mute, cooldown and history cap.
 
 ---
 
-MIT License — free to use, adapt and build upon.
+MIT License, free to use, adapt and build upon.
 
 Built by **[Samyog Sapkota](https://github.com/hola-mundo999)**.

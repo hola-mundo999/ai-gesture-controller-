@@ -1,4 +1,4 @@
-"""Gesture Controller — Streamlit host.
+"""Gesture Controller: Streamlit host.
 
 The controller itself is a self-contained web app (`index.html`, `styles.css`,
 `app.js`) so it can be opened directly, served as a static site, or embedded
@@ -21,7 +21,7 @@ import streamlit.components.v1 as components
 ROOT = Path(__file__).resolve().parent
 
 st.set_page_config(
-    page_title="Gesture Controller — Touchless Media & Pointer Control",
+    page_title="Gesture Controller: Touchless Media & Pointer Control",
     page_icon="🖐️",
     layout="wide",
     initial_sidebar_state="collapsed",

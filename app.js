@@ -47,12 +47,12 @@ const TRACKS = [
 const GESTURES = {
   OPEN_PALM: {
     label: "Open palm",
-    action: "Pointer — steer with the palm",
+    action: "Pointer: steer with the palm",
     verb: "Pointer",
   },
   PINCH: {
     label: "Pinch",
-    action: "Volume — continuous",
+    action: "Volume: continuous",
     verb: "Volume",
   },
   PEACE: {
@@ -538,7 +538,7 @@ function renderGesture(gesture, confidence) {
 
   dom.gestureName.textContent = meta.label;
   dom.gestureAction.textContent = meta.action;
-  dom.confidenceValue.textContent = confidence ? `${Math.round(state.confidence * 100)}%` : "—";
+  dom.confidenceValue.textContent = confidence ? `${Math.round(state.confidence * 100)}%` : "n/a";
   dom.confidenceFill.style.width = `${state.confidence * 100}%`;
   dom.volumeSource.hidden = gesture !== "PINCH";
 
@@ -814,7 +814,7 @@ function enterSimulator() {
   dom.modeCamera.setAttribute("aria-selected", "false");
   dom.modeSim.setAttribute("aria-selected", "true");
   setStatus("sim", "Simulator");
-  dom.fps.textContent = "— fps";
+  dom.fps.textContent = "0 fps";
   dom.visionMeta.textContent = "Simulator · mouse steers pointer";
   setSimGesture(state.simGesture, { silence: true });
   renderGesture(state.simGesture, 0.95);
@@ -940,7 +940,7 @@ function describeCameraError(error) {
     return "No camera was found. The simulator works without one.";
   }
   if (name === "NotReadableError") {
-    return "The camera is busy in another app. Close it, then retry — or use the simulator.";
+    return "The camera is busy in another app. Close it, then retry, or use the simulator.";
   }
   return `Camera could not start: ${error?.message || "unknown error"}. The simulator still works.`;
 }
@@ -974,7 +974,7 @@ function stopCamera({ silent = false } = {}) {
     dom.modeCamera.classList.remove("is-active");
     dom.modeCamera.setAttribute("aria-selected", "false");
     setStatus("idle", "Ready");
-    dom.fps.textContent = "— fps";
+    dom.fps.textContent = "0 fps";
     hidePointer();
     renderGesture("UNKNOWN", 0);
     if (!silent) toast("Camera stopped.");
