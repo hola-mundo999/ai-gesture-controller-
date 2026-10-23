@@ -1,5 +1,2 @@
 streamlit>=1.39.0
-numpy>=1.26.0
-
-# Development / testing
 pytest>=8.0.0

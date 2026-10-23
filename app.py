@@ -1,342 +1,71 @@
+"""Gesture Controller — Streamlit host.
+
+The controller itself is a self-contained web app (`index.html`, `styles.css`,
+`app.js`) so it can be opened directly, served as a static site, or embedded
+here. This entry inlines those assets into a single document because Streamlit
+component iframes resolve relative URLs against the parent page, not the
+repository.
+
+For the best camera behaviour, open the app at the top level:
+    python -m http.server 8000   ->   http://localhost:8000
+
+Or run the Streamlit host:
+    streamlit run app.py
+"""
+import re
+from pathlib import Path
+
 import streamlit as st
 import streamlit.components.v1 as components
-import time
-from gesture_engine import GestureEngine
-from virtual_actions import ActionDispatcher
+
+ROOT = Path(__file__).resolve().parent
 
 st.set_page_config(
-    page_title="AI Gesture Controller | Samyog",
+    page_title="Gesture Controller — Touchless Media & Pointer Control",
     page_icon="🖐️",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
 )
 
-# Custom Dark Styling
+# Remove Streamlit chrome so the app owns the viewport.
 st.markdown(
     """
 <style>
-    .stApp {
-        background-color: #0a0b10;
-        color: #f1f5f9;
-    }
-    .header-box {
-        background: linear-gradient(135deg, rgba(99,102,241,0.2) 0%, rgba(168,85,247,0.15) 100%);
-        border: 1px solid rgba(99,102,241,0.3);
-        border-radius: 16px;
-        padding: 24px;
-        margin-bottom: 24px;
-    }
-    .status-card {
-        background: rgba(15,23,42,0.7);
-        border: 1px solid rgba(255,255,255,0.08);
-        border-radius: 14px;
-        padding: 18px;
-        text-align: center;
-    }
-    .slide-viewer {
-        background: #111827;
-        border: 2px solid #374151;
-        border-radius: 16px;
-        padding: 32px;
-        min-height: 260px;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        text-align: center;
-    }
-    .webcam-box {
-        background: #111827;
-        border: 2px solid #374151;
-        border-radius: 16px;
-        padding: 10px;
-        min-height: 260px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        text-align: center;
-    }
-    .mode-hint {
-        font-size: 12px;
-        color: #94a3b8;
-        margin-top: 10px;
-        line-height: 1.5;
-    }
-    .gesture-legend {
-        font-size: 12.5px;
-        line-height: 1.7;
-    }
+  header[data-testid="stHeader"],
+  [data-testid="stToolbar"],
+  [data-testid="stDecoration"],
+  #MainMenu, footer { display: none !important; }
+  .stApp { background: #080a0f; }
+  .block-container { padding: 0 !important; max-width: 100% !important; }
+  [data-testid="stAppViewContainer"] > .main { padding: 0 !important; }
+  [data-testid="stVerticalBlock"] { gap: 0 !important; }
+  iframe { width: 100% !important; border: 0; display: block; }
 </style>
 """,
     unsafe_allow_html=True,
 )
 
-# State initialization
-if "dispatcher" not in st.session_state:
-    st.session_state.dispatcher = ActionDispatcher()
-if "current_gesture" not in st.session_state:
-    st.session_state.current_gesture = "OPEN_PALM"
-# armed_gesture prevents discrete actions from firing on every Streamlit rerun
-if "armed_gesture" not in st.session_state:
-    st.session_state.armed_gesture = None
-if "last_pinch_intensity" not in st.session_state:
-    st.session_state.last_pinch_intensity = None
 
-dispatcher = st.session_state.dispatcher
+def build_document() -> str:
+    """Inline the controller's CSS and JS into one HTML document."""
+    html = (ROOT / "index.html").read_text(encoding="utf-8")
+    css = (ROOT / "styles.css").read_text(encoding="utf-8")
+    js = (ROOT / "app.js").read_text(encoding="utf-8")
 
-# Header
-st.markdown(
-    """
-<div class="header-box">
-    <div style="font-family: monospace; font-size: 11px; color: #a5b4fc; margin-bottom: 6px;">
-        COMPUTER VISION & HUMAN-COMPUTER INTERACTION (HCI)
-    </div>
-    <h1 style="margin: 0; font-size: 32px; font-weight: 800; color: white;">
-        🖐️ AI Virtual Hand Gesture Controller
-    </h1>
-    <p style="margin: 8px 0 0 0; color: #94a3b8; font-size: 14px;">
-        Real-time gesture recognition mapping 21 hand landmarks to virtual system actions
-        (Presentation Slides, Volume, Media).
-    </p>
-</div>
-""",
-    unsafe_allow_html=True,
-)
-
-# Sidebar
-with st.sidebar:
-    st.markdown("### 🎛️ Input Mode")
-    mode = st.radio(
-        "Camera input",
-        options=["Gesture Simulator", "Live Webcam Preview"],
-        help="Gesture Simulator works on every platform (including Streamlit Cloud). "
-        "Live Webcam Preview shows your browser camera feed; classification is driven "
-        "by the gesture palette below.",
+    # Match optional cache-busting queries on the asset URLs.
+    html, styles = re.subn(
+        r'<link rel="stylesheet" href="styles\.css[^"]*" />',
+        lambda _: f"<style>\n{css}\n</style>",
+        html,
     )
-
-    st.markdown("---")
-    st.markdown("### 🖐️ Gesture Trigger Palette")
-    st.caption("Select a hand posture to drive the virtual dashboard:")
-
-    col_g1, col_g2 = st.columns(2)
-    with col_g1:
-        if st.button("🖐️ Open Palm", use_container_width=True):
-            st.session_state.current_gesture = "OPEN_PALM"
-            st.session_state.armed_gesture = None
-        if st.button("🤏 Pinch", use_container_width=True):
-            st.session_state.current_gesture = "PINCH"
-        if st.button("✌️ Victory / V", use_container_width=True):
-            st.session_state.current_gesture = "PEACE"
-            st.session_state.armed_gesture = None
-    with col_g2:
-        if st.button("👍 Thumbs Up", use_container_width=True):
-            st.session_state.current_gesture = "THUMBS_UP"
-            st.session_state.armed_gesture = None
-        if st.button("✊ Closed Fist", use_container_width=True):
-            st.session_state.current_gesture = "FIST"
-            st.session_state.armed_gesture = None
-
-    if st.button("🔁 Retrigger Gesture", use_container_width=True):
-        st.session_state.armed_gesture = None
-
-    st.markdown("---")
-    st.markdown("### 📐 Landmark Geometry Reference")
-    st.markdown(
-        """
-<div class="gesture-legend">
-- <b>Thumb–Index Pinch Distance:</b> Euclidean distance between Landmark 4 & Landmark 8<br>
-- <b>Extension Rule:</b> Tip Y-coordinate &lt; PIP joint Y-coordinate (finger extended)<br>
-- <b>Classification Rate:</b> ~30 FPS on a modern CPU<br>
-- <b>Cooldown:</b> 0.8s on discrete gestures (slide, media, mute) to prevent double triggers
-</div>
-""",
-        unsafe_allow_html=True,
+    html, scripts = re.subn(
+        r'<script src="app\.js[^"]*" defer></script>',
+        lambda _: f"<script>\n{js}\n</script>",
+        html,
     )
+    if styles != 1 or scripts != 1:
+        raise RuntimeError("index.html no longer exposes the expected CSS/JS tags")
+    return html
 
-    st.markdown("---")
-    st.markdown("👨‍💻 **Architected by:** Samyog")
-    st.caption("Computer Vision & Applied AI Project")
 
-# Process active gesture
-landmarks = GestureEngine.generate_synthetic_hand(st.session_state.current_gesture)
-classification = GestureEngine.classify_from_landmarks(landmarks)
-gesture = classification.get("gesture")
-
-if gesture == "PINCH":
-    # Continuous action: re-dispatch only when intensity meaningfully changes
-    intensity = classification.get("pinch_intensity", 50)
-    last_intensity = st.session_state.last_pinch_intensity
-    if last_intensity is None or abs(intensity - last_intensity) >= 1:
-        state = dispatcher.dispatch(classification)
-        st.session_state.last_pinch_intensity = intensity
-    else:
-        state = dispatcher.get_state(
-            feedback=f"Volume steady at {dispatcher.volume}%"
-        )
-else:
-    # Discrete action: fire once per gesture selection
-    if st.session_state.armed_gesture != gesture:
-        state = dispatcher.dispatch(classification)
-        st.session_state.armed_gesture = gesture
-    else:
-        state = dispatcher.get_state(
-            feedback=f"{classification.get('label', gesture)} active"
-        )
-
-# Metrics Row
-col1, col2, col3, col4 = st.columns(4)
-with col1:
-    st.markdown(
-        f"""
-        <div class="status-card">
-            <div style="font-size: 11px; font-family: monospace; color: #818cf8;">ACTIVE GESTURE</div>
-            <div style="font-size: 18px; font-weight: 700; color: white; margin-top: 4px;">
-                {classification.get('label', 'None')}
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-with col2:
-    st.markdown(
-        f"""
-        <div class="status-card">
-            <div style="font-size: 11px; font-family: monospace; color: #c084fc;">CONFIDENCE</div>
-            <div style="font-size: 18px; font-weight: 700; color: white; margin-top: 4px;">
-                {int(classification.get('confidence', 0) * 100)}%
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-with col3:
-    st.markdown(
-        f"""
-        <div class="status-card">
-            <div style="font-size: 11px; font-family: monospace; color: #38bdf8;">SLIDE NUMBER</div>
-            <div style="font-size: 18px; font-weight: 700; color: white; margin-top: 4px;">
-                Slide {state['slide']} / {dispatcher.max_slides}
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-with col4:
-    vol_text = "MUTED 🔇" if state['is_muted'] else f"{state['volume']}% 🔊"
-    st.markdown(
-        f"""
-        <div class="status-card">
-            <div style="font-size: 11px; font-family: monospace; color: #34d399;">AUDIO STATE</div>
-            <div style="font-size: 18px; font-weight: 700; color: white; margin-top: 4px;">
-                {vol_text}
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-st.markdown("<br>", unsafe_allow_html=True)
-
-# Main Two Columns
-left_col, right_col = st.columns([3, 2])
-
-with left_col:
-    if mode == "Live Webcam Preview":
-        st.subheader("📷 Live Webcam Preview")
-        st.caption("Camera feed runs entirely in your browser tab.")
-        webcam_html = """
-        <div class="webcam-box">
-            <video id="gestureWebcam" autoplay playsinline muted
-                   style="width:100%;max-width:640px;border-radius:12px;background:#0b0d13;"></video>
-            <div id="webcamStatus" style="margin-top:10px;font-size:12px;color:#94a3b8;">Starting camera…</div>
-        </div>
-        <script>
-        (function() {
-            const video = document.getElementById('gestureWebcam');
-            const status = document.getElementById('webcamStatus');
-            navigator.mediaDevices.getUserMedia({ video: true })
-                .then(function(stream) {
-                    video.srcObject = stream;
-                    status.textContent = 'Camera active — feed shown above.';
-                    status.style.color = '#34d399';
-                })
-                .catch(function(err) {
-                    video.style.display = 'none';
-                    status.textContent = 'Camera unavailable: ' + err.message +
-                        '. Use Gesture Simulator mode instead.';
-                    status.style.color = '#f87171';
-                });
-        })();
-        </script>
-        """
-        components.html(webcam_html, height=360)
-        st.markdown(
-            '<div class="mode-hint">'
-            '<b>Note:</b> Real-time MediaPipe landmark detection runs in the desktop build. '
-            'Here, the virtual dashboard is driven by the gesture palette above — the preview lets you '
-            'confirm your camera and lighting before a live session.</div>',
-            unsafe_allow_html=True,
-        )
-    else:
-        st.subheader("🖥️ Interactive Presentation Screen")
-        st.caption("Controlled via gestures: 👍 Next Slide | ✌️ Toggle Play | ✊ Mute | 🤏 Volume")
-
-        slide_titles = [
-            "Introduction to Computer Vision & HCI",
-            "Spatial Hand Tracking via 21 Landmarks",
-            "Real-Time Euclidean Distance Calculations",
-            "Edge Inference Optimization on CPUs",
-            "Virtual Action Dispatcher Architecture",
-            "Gesture Mappings: Pinches, Swipes & Fists",
-            "Deploying Vision Pipelines in Production",
-            "Summary & Next Steps",
-        ]
-        current_title = slide_titles[(state['slide'] - 1) % len(slide_titles)]
-
-        st.markdown(
-            f"""
-            <div class="slide-viewer">
-                <div style="font-size: 12px; font-family: monospace; color: #6366f1; margin-bottom: 8px;">
-                    SLIDE {state['slide']} OF {dispatcher.max_slides}
-                </div>
-                <h2 style="color: white; margin: 0 0 16px 0; font-size: 26px;">
-                    {current_title}
-                </h2>
-                <p style="color: #94a3b8; font-size: 14px; max-width: 500px; margin: 0 auto;">
-                    This slide responds directly to hand gestures detected by the vision classifier.
-                    Show a thumbs-up to advance or peace sign to toggle media playback.
-                </p>
-                <div style="margin-top: 20px; font-size: 12px; color: #a5b4fc; background: rgba(99,102,241,0.15); padding: 6px 16px; border-radius: 99px;">
-                    Media Status: {"▶️ Video Playing" if state["is_playing"] else "⏸️ Video Paused"}
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-        st.markdown("<br>", unsafe_allow_html=True)
-
-        st.write(f"**Virtual Volume Level ({state['volume']}%)**")
-        st.progress(state["volume"] / 100.0)
-
-with right_col:
-    st.subheader("📜 Event Audit Log")
-    st.caption("Live stream of detected gestures & dispatched system commands:")
-
-    if state["history"]:
-        for item in state["history"][:8]:
-            st.markdown(
-                f"""
-                <div style="background: rgba(15,23,42,0.6); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 10px 14px; margin-bottom: 8px; display: flex; justify-content: space-between; font-size: 13px;">
-                    <span style="font-family: monospace; color: #94a3b8;">[{item['time']}]</span>
-                    <strong style="color: #e2e8f0;">{item['type']}</strong>
-                    <span style="color: #818cf8;">{item['detail']}</span>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-    else:
-        st.info("No events registered yet. Trigger gestures from the sidebar!")
-
-    if state.get("feedback"):
-        st.caption(f"Last action: {state['feedback']}")
+components.html(build_document(), height=1060, scrolling=True)

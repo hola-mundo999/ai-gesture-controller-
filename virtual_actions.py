@@ -4,14 +4,16 @@ from typing import Dict, List
 
 class ActionDispatcher:
     """
-    Manages state for virtual controls: Volume, Slide Position, Playback state,
-    and maintains an audit log of triggered events.
+    State for the virtual controls: volume, track position, playback and mute,
+    plus an audit log of triggered events.
     """
 
+    TRACK_COUNT = 3
+
     def __init__(self):
-        self.volume = 50 # 0 to 100
-        self.current_slide = 1
-        self.max_slides = 20
+        self.volume = 50  # 0 to 100
+        self.current_track = 1
+        self.track_count = self.TRACK_COUNT
         self.is_playing = False
         self.is_muted = False
         self.last_action_time = 0
@@ -20,7 +22,6 @@ class ActionDispatcher:
     def dispatch(self, gesture_result: Dict) -> Dict:
         now = time.time()
         gesture = gesture_result.get("gesture")
-        action = gesture_result.get("action")
         feedback = "Idle"
 
         # Cooldown check for discrete gestures (to prevent rapid-fire triggers)
@@ -35,26 +36,26 @@ class ActionDispatcher:
             self._log("Volume Change", f"{self.volume}%")
 
         elif gesture == "THUMBS_UP":
-            self.current_slide = min(self.max_slides, self.current_slide + 1)
-            feedback = f"Advanced to Slide {self.current_slide}"
-            self._log("Slide Navigation", f"Slide {self.current_slide}")
+            self.current_track = self.current_track % self.track_count + 1
+            feedback = f"Now playing track {self.current_track}"
+            self._log("Track Change", f"Track {self.current_track}")
             self.last_action_time = now
 
         elif gesture == "PEACE":
             self.is_playing = not self.is_playing
-            state_str = "Playing ▶️" if self.is_playing else "Paused ⏸️"
+            state_str = "Playing" if self.is_playing else "Paused"
             feedback = f"Media State: {state_str}"
             self._log("Media Toggle", state_str)
             self.last_action_time = now
 
         elif gesture == "FIST":
             self.is_muted = not self.is_muted
-            feedback = "Audio Muted 🔇" if self.is_muted else "Audio Unmuted 🔊"
+            feedback = "Audio Muted" if self.is_muted else "Audio Unmuted"
             self._log("Mute Toggle", "Muted" if self.is_muted else "Unmuted")
             self.last_action_time = now
 
         elif gesture == "OPEN_PALM":
-            feedback = "Tracking Hand Position (Cursor Mode)"
+            feedback = "Pointer mode (tracking hand position)"
 
         return self.get_state(feedback=feedback)
 
@@ -72,7 +73,7 @@ class ActionDispatcher:
         return {
             "volume": self.volume,
             "is_muted": self.is_muted,
-            "slide": self.current_slide,
+            "track": self.current_track,
             "is_playing": self.is_playing,
             "feedback": feedback,
             "history": self.action_history

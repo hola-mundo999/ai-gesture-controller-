@@ -32,7 +32,7 @@ def test_thumbs_up_classification():
     lm = GestureEngine.generate_synthetic_hand("THUMBS_UP")
     result = GestureEngine.classify_from_landmarks(lm)
     assert result["gesture"] == "THUMBS_UP"
-    assert result["action"] == "NEXT_SLIDE"
+    assert result["action"] == "NEXT_TRACK"
 
 
 def test_fist_classification():
@@ -61,20 +61,20 @@ def test_pinch_distance_above_threshold_not_pinch():
     assert GestureEngine.classify_from_landmarks(lm)["gesture"] == "OPEN_PALM"
 
 
-def test_dispatch_advances_slide_once_within_cooldown():
+def test_dispatch_advances_track_once_within_cooldown():
     d = ActionDispatcher()
-    gesture = {"gesture": "THUMBS_UP", "action": "NEXT_SLIDE"}
+    gesture = {"gesture": "THUMBS_UP", "action": "NEXT_TRACK"}
     state1 = d.dispatch(gesture)
     state2 = d.dispatch(gesture)  # same gesture within 0.8s cooldown
-    assert state1["slide"] == 2
-    assert state2["slide"] == 2
+    assert state1["track"] == 2
+    assert state2["track"] == 2
 
 
-def test_dispatch_slide_capped_at_max():
+def test_dispatch_track_wraps_at_end_of_playlist():
     d = ActionDispatcher()
-    d.current_slide = d.max_slides
-    state = d.dispatch({"gesture": "THUMBS_UP", "action": "NEXT_SLIDE"})
-    assert state["slide"] == d.max_slides
+    d.current_track = d.track_count
+    state = d.dispatch({"gesture": "THUMBS_UP", "action": "NEXT_TRACK"})
+    assert state["track"] == 1
 
 
 def test_dispatch_mute_toggle():
@@ -94,14 +94,14 @@ def test_dispatch_unknown_gesture_is_noop():
     d = ActionDispatcher()
     before = d.get_state()
     after = d.dispatch({"gesture": "UNKNOWN", "action": "NONE"})
-    assert after["slide"] == before["slide"]
+    assert after["track"] == before["track"]
     assert after["volume"] == before["volume"]
 
 
 def test_dispatch_history_capped():
     d = ActionDispatcher()
     for _ in range(50):
-        d.dispatch({"gesture": "THUMBS_UP", "action": "NEXT_SLIDE"})
+        d.dispatch({"gesture": "THUMBS_UP", "action": "NEXT_TRACK"})
     assert len(d.action_history) <= 30
 
 

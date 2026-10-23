@@ -12,7 +12,7 @@ class GestureEngine:
         "OPEN_PALM": "🖐️ Open Palm (Cursor Mode)",
         "PINCH": "🤏 Pinch (Volume / Selection)",
         "PEACE": "✌️ Victory / V-Sign (Play / Pause)",
-        "THUMBS_UP": "👍 Thumbs Up (Next Slide / Confirm)",
+        "THUMBS_UP": "👍 Thumbs Up (Next Track / Confirm)",
         "FIST": "✊ Closed Fist (Mute / Halt)",
         "UNKNOWN": "🔍 Searching for Hand...",
     }
@@ -71,7 +71,7 @@ class GestureEngine:
                 "gesture": "THUMBS_UP",
                 "label": cls.GESTURES["THUMBS_UP"],
                 "confidence": 0.92,
-                "action": "NEXT_SLIDE",
+                "action": "NEXT_TRACK",
             }
 
         # Peace sign: Index and Middle are extended, others curled

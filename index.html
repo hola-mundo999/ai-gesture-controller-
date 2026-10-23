@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="theme-color" content="#080a0f" />
+<meta name="description" content="Gesture Controller — drive media playback, volume and an on-screen pointer with your hand. On-device hand tracking, nothing uploaded." />
+<title>Gesture Controller — Touchless Media &amp; Pointer Control</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23080a0f'/%3E%3Cpath d='M10 21V13a2 2 0 0 1 4 0v7M14 19V11a2 2 0 0 1 4 0v8M18 19v-6a2 2 0 0 1 4 0v8a6 6 0 0 1-6 6h-2a6 6 0 0 1-6-6v-3' fill='none' stroke='%23c9f56d' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E" />
+<link rel="stylesheet" href="styles.css?v=2" />
+</head>
+<body>
+<a class="skip" href="#controls">Skip to controls</a>
+
+<div class="shell">
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand__mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M7 12V7.5a1.5 1.5 0 0 1 3 0V12M10 11.5V6a1.5 1.5 0 0 1 3 0v6M13 12V7.5a1.5 1.5 0 0 1 3 0V15a5 5 0 0 1-5 5h-1a5 5 0 0 1-5-5v-2.5" />
+        </svg>
+      </span>
+      <div class="brand__text">
+        <strong>Gesture Controller</strong>
+        <span>Media &amp; pointer control · on-device vision</span>
+      </div>
+    </div>
+
+    <div class="topbar__tools">
+      <span class="fps" id="fps" title="Inference rate">— fps</span>
+      <div class="segmented" role="tablist" aria-label="Input mode">
+        <button class="segmented__btn is-active" id="mode-camera" role="tab" aria-selected="true" type="button">Camera</button>
+        <button class="segmented__btn" id="mode-sim" role="tab" aria-selected="false" type="button">Simulator</button>
+      </div>
+      <span class="pill" id="status-pill" data-state="idle">
+        <span class="pill__dot" aria-hidden="true"></span>
+        <span id="status-text">Ready</span>
+      </span>
+    </div>
+  </header>
+
+  <main class="layout">
+    <div class="column">
+      <section class="panel controls" id="controls" aria-label="Media and pointer controls">
+        <header class="panel__head">
+          <span class="eyebrow">Control surface</span>
+          <span class="eyebrow eyebrow--dim" id="engine-meta">Web Audio · local synth</span>
+        </header>
+
+        <div class="player">
+          <div class="player__head">
+            <canvas class="waveform" id="waveform" height="56" aria-hidden="true"></canvas>
+            <div class="player__meta">
+              <span class="player__index" id="track-index">Track 01 / 03</span>
+              <h1 class="player__title" id="track-title">Low Orbit</h1>
+              <p class="player__desc" id="track-desc">Wide pad, slow filter drift.</p>
+            </div>
+            <span class="player__state" id="track-state" data-state="paused">
+              <span class="player__state-dot" aria-hidden="true"></span>
+              <span id="track-state-text">Paused</span>
+            </span>
+          </div>
+
+          <div class="transport">
+            <div class="transport__group">
+              <button class="icon-btn" id="btn-prev" type="button" aria-label="Previous track" title="Previous track (←)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>
+              </button>
+              <button class="icon-btn icon-btn--wide" id="btn-play" type="button" aria-label="Play audio" title="Play / pause (Space)">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l11-6.5z"/></svg>
+              </button>
+              <button class="icon-btn" id="btn-next" type="button" aria-label="Next track" title="Next track (→)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+              </button>
+            </div>
+
+            <div class="transport__group transport__volume">
+              <button class="icon-btn icon-btn--flat" id="btn-mute" type="button" aria-label="Mute audio" title="Mute (M)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" id="mute-icon"><path d="M4 9.5h3l4.5-3.5v12L7 14.5H4z"/><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11"/></svg>
+              </button>
+              <label for="volume" class="volume__label">Volume</label>
+              <input id="volume" type="range" min="0" max="100" value="50" step="1" aria-label="Volume" />
+              <output id="volume-value" for="volume">50%</output>
+              <span class="gesture-tag" id="volume-source" hidden>pinch</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="pointer">
+          <div class="pointer__head">
+            <span class="eyebrow">Pointer</span>
+            <span class="eyebrow eyebrow--dim">Open palm to steer</span>
+          </div>
+          <div class="pointer__pad" id="pointer-pad">
+            <div class="pointer__grid" aria-hidden="true"></div>
+            <div class="pointer__cross" aria-hidden="true"></div>
+            <span class="pointer__dot" id="pointer-dot" hidden></span>
+            <span class="pointer__hint" id="pointer-hint">No hand detected</span>
+          </div>
+          <div class="pointer__foot">
+            <span class="pointer__coord" id="pointer-x">x 0.50</span>
+            <span class="pointer__coord" id="pointer-y">y 0.50</span>
+            <span class="pointer__status" id="pointer-status">Idle</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel mapping" aria-label="Gesture map">
+        <header class="panel__head">
+          <span class="eyebrow">Gesture map</span>
+          <span class="eyebrow eyebrow--dim">hold 220 ms · 900 ms cooldown</span>
+        </header>
+        <ul class="mapping__list">
+          <li class="mapping__item" data-gesture="OPEN_PALM">
+            <span class="mapping__key">01</span>
+            <span class="mapping__name">Open palm</span>
+            <span class="mapping__action">Steer the pointer</span>
+          </li>
+          <li class="mapping__item" data-gesture="PINCH">
+            <span class="mapping__key">02</span>
+            <span class="mapping__name">Pinch</span>
+            <span class="mapping__action">Set volume, continuous</span>
+          </li>
+          <li class="mapping__item" data-gesture="PEACE">
+            <span class="mapping__key">03</span>
+            <span class="mapping__name">Peace</span>
+            <span class="mapping__action">Play / pause</span>
+          </li>
+          <li class="mapping__item" data-gesture="THUMBS_UP">
+            <span class="mapping__key">04</span>
+            <span class="mapping__name">Thumbs up</span>
+            <span class="mapping__action">Next track</span>
+          </li>
+          <li class="mapping__item" data-gesture="FIST">
+            <span class="mapping__key">05</span>
+            <span class="mapping__name">Closed fist</span>
+            <span class="mapping__action">Mute / unmute</span>
+          </li>
+        </ul>
+      </section>
+    </div>
+
+    <aside class="rail" aria-label="Vision and session">
+      <section class="panel vision">
+        <header class="panel__head">
+          <span class="eyebrow">Vision</span>
+          <span class="eyebrow eyebrow--dim" id="vision-meta">MediaPipe · 21 landmarks</span>
+        </header>
+
+        <div class="viewport" id="viewport">
+          <video id="video" playsinline muted></video>
+          <canvas id="overlay" width="640" height="480"></canvas>
+
+          <div class="viewport__empty" id="camera-empty">
+            <div class="empty__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5A2.5 2.5 0 0 1 5.5 6h2L9 4h6l1.5 2h2A2.5 2.5 0 0 1 21 8.5v8A2.5 2.5 0 0 1 18.5 19h-13A2.5 2.5 0 0 1 3 16.5z"/><circle cx="12" cy="12.5" r="3.2"/></svg>
+            </div>
+            <h2>Nothing is recorded.</h2>
+            <p>Frames are read in this tab and never uploaded.</p>
+            <button class="btn btn--primary" id="btn-camera" type="button">Enable camera</button>
+            <button class="btn btn--ghost" id="btn-sim-start" type="button">Use simulator instead</button>
+            <p class="empty__note" id="camera-note">Requires camera permission · Chrome, Edge, Safari 17+</p>
+          </div>
+
+          <div class="viewport__sim" id="sim-stage" hidden>
+            <svg class="sim-hand" viewBox="0 0 200 220" aria-hidden="true">
+              <g id="sim-skeleton" stroke="var(--accent)" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"></g>
+            </svg>
+            <span class="sim-stage__tag">Simulated input</span>
+          </div>
+
+          <div class="viewport__badge" id="camera-badge" hidden>
+            <span class="live-dot" aria-hidden="true"></span> Live · on-device
+          </div>
+        </div>
+
+        <div class="readout">
+          <div class="readout__main">
+            <span class="readout__label">Detected gesture</span>
+            <strong class="readout__gesture" id="gesture-name">No hand</strong>
+            <span class="readout__action" id="gesture-action">Show your hand to begin</span>
+          </div>
+          <div class="confidence">
+            <div class="confidence__top"><span>Confidence</span><span id="confidence-value">—</span></div>
+            <div class="confidence__track"><span id="confidence-fill"></span></div>
+          </div>
+        </div>
+
+        <div class="sim-panel" id="sim-panel" hidden>
+          <div class="sim-panel__row" id="sim-palette">
+            <button class="gesture-chip" data-gesture="OPEN_PALM" type="button">Open palm</button>
+            <button class="gesture-chip" data-gesture="PINCH" type="button">Pinch</button>
+            <button class="gesture-chip" data-gesture="PEACE" type="button">Peace</button>
+            <button class="gesture-chip" data-gesture="THUMBS_UP" type="button">Thumbs up</button>
+            <button class="gesture-chip" data-gesture="FIST" type="button">Fist</button>
+          </div>
+          <label class="sim-slider" for="pinch-strength">
+            <span>Pinch</span>
+            <input id="pinch-strength" type="range" min="0" max="100" value="70" step="1" />
+            <output id="pinch-strength-value" for="pinch-strength">70%</output>
+          </label>
+        </div>
+      </section>
+
+      <section class="panel session">
+        <header class="panel__head">
+          <span class="eyebrow">Session log</span>
+          <button class="text-btn" id="btn-clear-log" type="button">Clear</button>
+        </header>
+        <ol class="log" id="log" aria-live="polite">
+          <li class="log__empty" id="log-empty">Actions appear here as you gesture.</li>
+        </ol>
+      </section>
+    </aside>
+  </main>
+
+  <footer class="statusbar">
+    <div class="shortcuts">
+      <span><kbd>Space</kbd> play / pause</span>
+      <span><kbd>M</kbd> mute</span>
+      <span><kbd>←</kbd><kbd>→</kbd> tracks</span>
+      <span><kbd>V</kbd> vision</span>
+    </div>
+    <p class="privacy">On-device inference · no uploads · no accounts</p>
+  </footer>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="app.js?v=2" defer></script>
+</body>
+</html>
