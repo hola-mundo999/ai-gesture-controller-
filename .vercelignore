@@ -1,0 +1,11 @@
+__pycache__/
+.pytest_cache/
+tests/
+venv/
+.venv/
+*.pyc
+app.py
+requirements.txt
+gesture_engine.py
+virtual_actions.py
+README.md
